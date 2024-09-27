@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Balloon Pop Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Roboto:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: 'Roboto', sans-serif;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 390px;
+            height: 800px;
+            background-color: #87CEEB;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        #balloon {
+            width: 100px;
+            height: 120px;
+            position: absolute;
+            bottom: 20%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.1s ease;
+        }
+        .balloon-color {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            z-index: 1;
+        }
+        .balloon-color::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            background-color: inherit;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 40%;
+        }
+        .balloon-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            color: white;
+            font-size: 24px;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: white;
+            z-index: 10;
+        }
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            border-radius: 20px;
+            z-index: 20;
+        }
+        #game-over-coins {
+            font-family: 'Bangers', cursive;
+            font-size: 48px;
+            color: gold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin: 20px 0;
+        }
+        #high-scores {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #restart-message {
+            margin-top: 20px;
+            font-size: 18px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        #easter-egg {
+            font-size: 18px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow 5s ease infinite;
+            margin-top: 20px;
+        }
+        @keyframes rainbow {
+            0%{background-position:0% 50%}
+            50%{background-position:100% 25%}
+            100%{background-position:0% 50%}
+        }
+        .particle {
+            position: absolute;
+            pointer-events: none;
+        }
+        @keyframes explode-particle {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) rotate(var(--rot)); opacity: 0; }
+        }
+        #shop-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #shop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            font-size: 18px;
+            border-radius: 20px;
+            z-index: 20;
+            padding-top: 20px;
+        }
+        #shop-coins {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: gold;
+            text-shadow: 1px 1px 2px black;
+        }
+        .balloon-option {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            width: 80%;
+            justify-content: space-between;
+        }
+        .balloon-color-sample {
+            width: 30px;
+            height: 36px;
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+            margin-right: 10px;
+            position: relative;
+        }
+        .balloon-color-sample::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 9px;
+            background-color: inherit;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 40%;
+        }
+        .balloon-select {
+            margin-left: 10px;
+        }
+        .locked {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .unlocked {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #close-shop {
+            position: absolute;
+            bottom: 30%;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #reset-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 5px 10px;
+            font-size: 14px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .balloon-color.rainbow {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+        }
+        .balloon-color.rainbow::after {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+        }
+        .balloon-color-sample.rainbow {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+        }
+        .balloon-color-sample.rainbow::after {
+            background: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet);
+        }
+        .balloon-color.rabbit {
+            position: relative;
+            background-color: #FF0000 !important;
+        }
+        .balloon-color.rabbit::before,
+        .balloon-color.rabbit::after {
+            content: '';
+            position: absolute;
+            width: 40%;
+            height: 60%;
+            background-color: #FF0000 !important;
+            top: -30%;
+            border-radius: 70% 70% 0 0;
+        }
+        .balloon-color.rabbit::before {
+            left: 5%;
+            transform: rotate(-10deg);
+        }
+        .balloon-color.rabbit::after {
+            right: 5%;
+            transform: rotate(10deg);
+        }
+        .balloon-color-sample.rabbit {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #FF0000 !important;
+            position: relative;
+        }
+        .balloon-color-sample.rabbit::before,
+        .balloon-color-sample.rabbit::after {
+            content: '';
+            position: absolute;
+            width: 40%;
+            height: 60%;
+            background-color: #FF0000 !important;
+            top: -30%;
+            border-radius: 70% 70% 0 0;
+        }
+        .balloon-color-sample.rabbit::before {
+            left: 5%;
+            transform: rotate(-10deg);
+        }
+        .balloon-color-sample.rabbit::after {
+            right: 5%;
+            transform: rotate(10deg);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score">Clicks: 0</div>
+        <button id="reset-button">Reset Game</button>
+        <div id="balloon">
+            <div class="balloon-color"></div>
+            <div class="balloon-text">0</div>
+        </div>
+        <div id="game-over">
+            <p>Game Over</p>
+            <p>Your Score: <span id="final-score"></span></p>
+            <div id="game-over-coins">0 Coins</div>
+            <div id="high-scores"></div>
+            <div id="easter-egg">Mystery Easter Egg: ????</div>
+            <button id="shop-button">Shop</button>
+            <div id="restart-message">Tap the screen or press any key to restart</div>
+        </div>
+        <div id="shop">
+            <h2>Balloon Shop</h2>
+            <div id="shop-coins">Coins: 0</div>
+            <div class="balloon-option">
+                <div style="display: flex; align-items: center;">
+                    <div class="balloon-color-sample" style="background-color: #FF0000;"></div>
+                    <span>Red Balloon</span>
+                </div>
+                <div>
+                    <span>Default</span>
+                    <input type="radio" name="balloon-select" value="#FF0000" class="balloon-select" checked>
+                </div>
+            </div>
+            <div class="balloon-option" id="green-balloon-option">
+                <div style="display: flex; align-items: center;">
+                    <div class="balloon-color-sample" style="background-color: #90EE90;"></div>
+                    <span>Light Green Balloon</span>
+                </div>
+                <div>
+                    <span>5000 coins</span>
+                    <input type="radio" name="balloon-select" value="#90EE90" class="balloon-select" disabled>
+                </div>
+            </div>
+            <div class="balloon-option" id="yellow-balloon-option">
+                <div style="display: flex; align-items: center;">
+                    <div class="balloon-color-sample" style="background-color: #FFFF00;"></div>
+                    <span>Yellow Balloon</span>
+                </div>
+                <div>
+                    <span>15000 coins</span>
+                    <input type="radio" name="balloon-select" value="#FFFF00" class="balloon-select" disabled>
+                </div>
+            </div>
+            <div class="balloon-option" id="pink-balloon-option" style="display: none;">
+                <div style="display: flex; align-items: center;">
+                    <div class="balloon-color-sample" style="background-color: #FFC0CB;"></div>
+                    <span>Pink Balloon</span>
+                </div>
+                <div>
+                    <span>150000 coins</span>
+                    <input type="radio" name="balloon-select" value="#FFC0CB" class="balloon-select" disabled>
+                </div>
+            </div>
+            <div class="balloon-option" id="rainbow-balloon-option">
+                <div style="display: flex; align-items: center;">
+                    <div class="balloon-color-sample rainbow"></div>
+                    <span>Rainbow Balloon</span>
+                </div>
+                <div>
+                    <span>50 coins</span>
+                    <input type="radio" name="balloon-select" value="rainbow" class="balloon-select" disabled>
+                </div>
+            </div>
+            <div class="balloon-option" id="rabbit-balloon-option">
+                <div style="display: flex; align-items: center;">
+                    <div class="balloon-color-sample rabbit"></div>
+                    <span>Rabbit Balloon</span>
+                </div>
+                <div>
+                    <span>100 coins</span>
+                    <input type="radio" name="balloon-select" value="rabbit" class="balloon-select" disabled>
+                </div>
+            </div>
+            <button id="close-shop">Close Shop</button>
+        </div>
+    </div>
+
+    <script>
+        const balloon = document.getElementById('balloon');
+        const balloonColor = balloon.querySelector('.balloon-color');
+        const balloonText = balloon.querySelector('.balloon-text');
+        const scoreDisplay = document.getElementById('score');
+        const gameOver = document.getElementById('game-over');
+        const finalScore = document.getElementById('final-score');
+        const gameOverCoins = document.getElementById('game-over-coins');
+        const highScores = document.getElementById('high-scores');
+        const restartMessage = document.getElementById('restart-message');
+        const gameContainer = document.getElementById('game-container');
+        const shopButton = document.getElementById('shop-button');
+        const shop = document.getElementById('shop');
+        const closeShopButton = document.getElementById('close-shop');
+        const balloonOptions = document.querySelectorAll('.balloon-select');
+        const easterEgg = document.getElementById('easter-egg');
+        const resetButton = document.getElementById('reset-button');
+
+        let size = 100;
+        let clicks = 0;
+        let popProbability = 0.02;
+        let canRestart = true;
+
+        const RED_COLOR = '#FF0000';
+        const LIGHT_GREEN_COLOR = '#90EE90';
+        const YELLOW_COLOR = '#FFFF00';
+        const PINK_COLOR = '#FFC0CB';
+        const RAINBOW_COLOR = 'rainbow';
+        const RABBIT_COLOR = 'rabbit';
+
+        let currentBalloonColor = RED_COLOR;
+
+        let totalCoins = 0;
+        const GREEN_BALLOON_COST = 5000;
+        const YELLOW_BALLOON_COST = 15000;
+        const PINK_BALLOON_COST = 150000;
+        const RAINBOW_BALLOON_COST = 50;
+        const RABBIT_BALLOON_COST = 100;
+
+        let unlockedBalloons = [RED_COLOR];
+        let isPinkUnlocked = false;
+
+        let scores = [];
+
+        // Web Audio API context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playPumpSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playPopSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(550, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(40, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function updateBalloon() {
+            balloon.style.width = `${size}px`;
+            balloon.style.height = `${size * 1.2}px`;
+            balloonText.textContent = clicks;
+            balloonColor.className = `balloon-color ${currentBalloonColor}`;
+            if (currentBalloonColor !== RAINBOW_COLOR && currentBalloonColor !== RABBIT_COLOR) {
+                balloonColor.style.backgroundColor = currentBalloonColor;
+            } else if (currentBalloonColor === RABBIT_COLOR) {
+                balloonColor.style.backgroundColor = '#FF0000';
+            }
+            // 确保文字始终居中
+            balloonText.style.fontSize = `${Math.max(24, size / 4)}px`;
+        }
+
+        function updateCoinsDisplay() {
+            const shopCoinsDisplay = document.getElementById('shop-coins');
+            if (shopCoinsDisplay) {
+                shopCoinsDisplay.textContent = `Coins: ${totalCoins}`;
+            }
+            gameOverCoins.textContent = `${totalCoins} Coins`;
+        }
+
+        function saveGameState() {
+            localStorage.setItem('totalCoins', totalCoins);
+            localStorage.setItem('unlockedBalloons', JSON.stringify(unlockedBalloons));
+            localStorage.setItem('isPinkUnlocked', isPinkUnlocked);
+            localStorage.setItem('currentBalloonColor', currentBalloonColor);
+        }
+
+        function loadGameState() {
+            const savedCoins = localStorage.getItem('totalCoins');
+            if (savedCoins !== null) {
+                totalCoins = parseInt(savedCoins);
+            }
+
+            const savedBalloons = localStorage.getItem('unlockedBalloons');
+            if (savedBalloons !== null) {
+                unlockedBalloons = JSON.parse(savedBalloons);
+            }
+
+            const savedPinkUnlocked = localStorage.getItem('isPinkUnlocked');
+            if (savedPinkUnlocked !== null) {
+                isPinkUnlocked = JSON.parse(savedPinkUnlocked);
+            }
+
+            const savedBalloonColor = localStorage.getItem('currentBalloonColor');
+            if (savedBalloonColor !== null) {
+                currentBalloonColor = savedBalloonColor;
+            }
+
+            updateCoinsDisplay();
+            unlockedBalloons.forEach(color => unlockBalloon(color));
+            if (isPinkUnlocked) {
+                document.getElementById('pink-balloon-option').style.display = 'flex';
+                easterEgg.textContent = "Mystery Easter Egg: Pink Balloon";
+            } else {
+                easterEgg.textContent = "Mystery Easter Egg: ????";
+            }
+            updateBalloon();
+        }
+
+        function unlockBalloon(color) {
+            let option;
+            if (color === LIGHT_GREEN_COLOR) {
+                option = document.getElementById('green-balloon-option');
+            } else if (color === YELLOW_COLOR) {
+                option = document.getElementById('yellow-balloon-option');
+            } else if (color === PINK_COLOR) {
+                option = document.getElementById('pink-balloon-option');
+            } else if (color === RAINBOW_COLOR) {
+                option = document.getElementById('rainbow-balloon-option');
+            } else if (color === RABBIT_COLOR) {
+                option = document.getElementById('rabbit-balloon-option');
+            }
+            if (option) {
+                option.classList.remove('locked');
+                option.classList.add('unlocked');
+                option.querySelector('input').disabled = false;
+            }
+            if (!unlockedBalloons.includes(color)) {
+                unlockedBalloons.push(color);
+                saveGameState();
+            }
+        }
+
+        function inflateBalloon() {
+            clicks++;
+            size += 1.25;
+            updateBalloon();
+            scoreDisplay.textContent = `Clicks: ${clicks}`;
+            playPumpSound();
+
+            if (Math.random() < popProbability) {
+                endGame();
+            }
+        }
+
+        function updateHighScores() {
+            scores.push(clicks);
+            scores.sort((a, b) => b - a);
+            scores = scores.slice(0, 3);
+
+            highScores.innerHTML = '<h3>High Scores</h3>' +
+                scores.map((score, index) => `<p>${index + 1}. ${score}</p>`).join('');
+        }
+
+        function createShape(type) {
+            const shape = document.createElement('div');
+            shape.className = 'particle';
+            const size = 5 + Math.random() * 15;
+
+            switch(type) {
+                case 'rectangle':
+                    shape.style.width = `${size * 2}px`;
+                    shape.style.height = `${size}px`;
+                    break;
+                case 'triangle':
+                    shape.style.width = `${size}px`;
+                    shape.style.height = `${size}px`;
+                    shape.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+                    break;
+                case 'trapezoid':
+                    shape.style.width = `${size * 2}px`;
+                    shape.style.height = `${size}px`;
+                    shape.style.clipPath = 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)';
+                    break;
+                case 'square':
+                    shape.style.width = `${size}px`;
+                    shape.style.height = `${size}px`;
+                    break;
+                case 'circle':
+                    shape.style.width = `${size}px`;
+                    shape.style.height = `${size}px`;
+                    shape.style.borderRadius = '50%';
+                    break;
+                case 'polygon':
+                    const sides = 5 + Math.floor(Math.random() * 3);
+                    const points = [];
+                    for (let i = 0; i < sides; i++) {
+                        const angle = (i / sides) * 2 * Math.PI;
+                        const x = 50 + 50 * Math.cos(angle);
+                        const y = 50 + 50 * Math.sin(angle);
+                        points.push(`${x}% ${y}%`);
+                    }
+                    shape.style.width = `${size}px`;
+                    shape.style.height = `${size}px`;
+                    shape.style.clipPath = `polygon(${points.join(', ')})`;
+                    break;
+            }
+            
+            return shape;
+        }
+
+        function createParticles() {
+            const particleCount = 50;
+            const centerX = gameContainer.offsetWidth / 2;
+            const centerY = gameContainer.offsetHeight * 0.65;
+            const shapes = ['rectangle', 'triangle', 'trapezoid', 'square', 'circle', 'polygon'];
+
+            for (let i = 0; i < particleCount; i++) {
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
+                const particle = createShape(shape);
+                if (currentBalloonColor === RAINBOW_COLOR) {
+                    const rainbowColors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
+                    particle.style.backgroundColor = rainbowColors[Math.floor(Math.random() * rainbowColors.length)];
+                } else if (currentBalloonColor === RABBIT_COLOR) {
+                    particle.style.backgroundColor = '#FF0000';
+                } else {
+                    particle.style.backgroundColor = currentBalloonColor;
+                }
+                particle.style.left = `${centerX}px`;
+                particle.style.top = `${centerY}px`;
+
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 7;
+                const tx = Math.cos(angle) * speed * 50;
+                const ty = Math.sin(angle) * speed * 50;
+                const rot = Math.random() * 720 - 360;
+
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                particle.style.setProperty('--rot', `${rot}deg`);
+                particle.style.animation = 'explode-particle 1s forwards';
+
+                gameContainer.appendChild(particle);
+                setTimeout(() => gameContainer.removeChild(particle), 1000);
+            }
+        }
+
+        function endGame() {
+            playPopSound();
+            createParticles();
+            balloon.style.display = 'none';
+            totalCoins += clicks;
+            updateCoinsDisplay();
+            saveGameState();
+            setTimeout(() => {
+                gameOver.style.display = 'flex';
+                finalScore.textContent = clicks;
+                updateHighScores();
+                easterEgg.textContent = isPinkUnlocked ? "Mystery Easter Egg: Pink Balloon" : "Mystery Easter Egg: ????";
+                canRestart = false;
+                setTimeout(() => {
+                    canRestart = true;
+                    restartMessage.style.opacity = '1';
+                }, 1000);
+            }, 1000);
+        }
+
+        function resetGame() {
+            if (!canRestart) return;
+            size = 100;
+            clicks = 0;
+            popProbability = 0.02;
+            balloon.style.display = 'flex';
+            updateBalloon();
+            scoreDisplay.textContent = 'Clicks: 0';
+            gameOver.style.display = 'none';
+            restartMessage.style.opacity = '0';
+            updateCoinsDisplay();
+
+            // Check for pink balloon easter egg
+            if (Math.random() < 0.001 && !isPinkUnlocked) {
+                currentBalloonColor = PINK_COLOR;
+                updateBalloon();
+                easterEgg.textContent = "Mystery Easter Egg: Pink Balloon";
+                isPinkUnlocked = true;
+                document.getElementById('pink-balloon-option').style.display = 'flex';
+                unlockBalloon(PINK_COLOR);
+                saveGameState();
+            } else if (!isPinkUnlocked) {
+                easterEgg.textContent = "Mystery Easter Egg: ????";
+            }
+        }
+
+        function checkBalloonUnlock() {
+            if (totalCoins >= GREEN_BALLOON_COST) {
+                unlockBalloon(LIGHT_GREEN_COLOR);
+            }
+            if (totalCoins >= YELLOW_BALLOON_COST) {
+                unlockBalloon(YELLOW_COLOR);
+            }
+            if (totalCoins >= PINK_BALLOON_COST && isPinkUnlocked) {
+                unlockBalloon(PINK_COLOR);
+            }
+            if (totalCoins >= RAINBOW_BALLOON_COST) {
+                unlockBalloon(RAINBOW_COLOR);
+            }
+            if (totalCoins >= RABBIT_BALLOON_COST) {
+                unlockBalloon(RABBIT_COLOR);
+            }
+        }
+
+        function hardReset() {
+            totalCoins = 0;
+            unlockedBalloons = [RED_COLOR];
+            isPinkUnlocked = false;
+            currentBalloonColor = RED_COLOR;
+            scores = [];
+            
+            // Reset balloon options in the shop
+            document.querySelectorAll('.balloon-option').forEach(option => {
+                if (option.id !== 'red-balloon-option') {
+                    option.classList.add('locked');
+                    option.classList.remove('unlocked');
+                    option.querySelector('input').disabled = true;
+                }
+            });
+            document.querySelector('input[value="#FF0000"]').checked = true;
+            
+            // Hide pink balloon option
+            document.getElementById('pink-balloon-option').style.display = 'none';
+            
+            easterEgg.textContent = "Mystery Easter Egg: ????";
+            
+            saveGameState();
+            resetGame();
+            updateCoinsDisplay();
+        }
+
+        document.addEventListener('click', function(event) {
+            if (gameOver.style.display === 'flex' || shop.style.display === 'flex') {
+                return;
+            }
+            inflateBalloon();
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') {
+                if (gameOver.style.display === 'flex' || shop.style.display === 'flex') {
+                    return;
+                }
+                inflateBalloon();
+            }
+        });
+
+        shopButton.addEventListener('click', function() {
+            gameOver.style.display = 'none';
+            shop.style.display = 'flex';
+            checkBalloonUnlock();
+        });
+
+        closeShopButton.addEventListener('click', function() {
+            shop.style.display = 'none';
+            resetGame();
+        });
+
+        balloonOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                const selectedColor = this.value;
+                let cost = 0;
+
+                if (selectedColor === LIGHT_GREEN_COLOR) {
+                    cost = GREEN_BALLOON_COST;
+               } else if (selectedColor === YELLOW_COLOR) {
+                    cost = YELLOW_BALLOON_COST;
+                } else if (selectedColor === PINK_COLOR) {
+                    cost = PINK_BALLOON_COST;
+                } else if (selectedColor === RAINBOW_COLOR) {
+                    cost = RAINBOW_BALLOON_COST;
+                } else if (selectedColor === RABBIT_COLOR) {
+                    cost = RABBIT_BALLOON_COST;
+                }
+
+                if (selectedColor !== RED_COLOR && !unlockedBalloons.includes(selectedColor)) {
+                    if (totalCoins < cost) {
+                        alert("Not enough coins to purchase this balloon!");
+                        this.checked = false;
+                        document.querySelector('input[value="#FF0000"]').checked = true;
+                        return;
+                    }
+                    if (confirm(`Are you sure you want to purchase this balloon for ${cost} coins?`)) {
+                        totalCoins -= cost;
+                        unlockBalloon(selectedColor);
+                        updateCoinsDisplay();
+                        saveGameState();
+                    } else {
+                        this.checked = false;
+                        document.querySelector('input[value="#FF0000"]').checked = true;
+                        return;
+                    }
+                }
+
+                currentBalloonColor = selectedColor;
+                updateBalloon();
+                saveGameState();
+            });
+        });
+
+        // Initialize locked balloon options
+        document.getElementById('green-balloon-option').classList.add('locked');
+        document.getElementById('yellow-balloon-option').classList.add('locked');
+        document.getElementById('rainbow-balloon-option').classList.add('locked');
+        document.getElementById('rabbit-balloon-option').classList.add('locked');
+
+        // Check unlock status when game over or shop opens
+        gameOver.addEventListener('click', checkBalloonUnlock);
+        shopButton.addEventListener('click', checkBalloonUnlock);
+
+        document.addEventListener('click', function(event) {
+            if (event.target === gameOver || event.target === shop) {
+                return;
+            }
+            if (gameOver.style.display === 'flex') {
+                resetGame();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (gameOver.style.display === 'flex') {
+                resetGame();
+            }
+        });
+
+        resetButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to reset the game? This will erase all your progress.')) {
+                hardReset();
+            }
+        });
+
+        // Initialize game
+        loadGameState();
+        resetGame();
+    </script>
+</body>
+</html>
