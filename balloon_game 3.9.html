@@ -258,6 +258,17 @@
             right: 5%;
             transform: rotate(10deg);
         }
+        .balloon-color.rabbit .balloon-tail {
+            content: '';
+            position: absolute;
+            width: var(--tail-width, 10px);
+            height: var(--tail-height, 20px);
+            background-color: #FF0000 !important;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 40%;
+        }
         .balloon-color-sample.rabbit {
             width: 30px;
             height: 30px;
@@ -282,6 +293,17 @@
         .balloon-color-sample.rabbit::after {
             right: 5%;
             transform: rotate(10deg);
+        }
+        .balloon-color-sample.rabbit .balloon-tail {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 9px;
+            background-color: #FF0000 !important;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 40%;
         }
     </style>
 </head>
@@ -391,6 +413,7 @@
         let clicks = 0;
         let popProbability = 0.02;
         let canRestart = true;
+        let isGameOver = false;
 
         const RED_COLOR = '#FF0000';
         const LIGHT_GREEN_COLOR = '#90EE90';
@@ -417,6 +440,7 @@
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
         function playPumpSound() {
+            if (isGameOver) return;
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             
@@ -464,6 +488,28 @@
             }
             // 确保文字始终居中
             balloonText.style.fontSize = `${Math.max(24, size / 4)}px`;
+
+            // 更新兔子气球的尾巴大小
+            if (currentBalloonColor === RABBIT_COLOR) {
+                const tailWidth = Math.max(10, size / 10);
+                const tailHeight = Math.max(20, size / 5);
+                balloonColor.style.setProperty('--tail-width', `${tailWidth}px`);
+                balloonColor.style.setProperty('--tail-height', `${tailHeight}px`);
+                
+                // 确保尾巴元素存在
+                let tail = balloonColor.querySelector('.balloon-tail');
+                if (!tail) {
+                    tail = document.createElement('div');
+                    tail.className = 'balloon-tail';
+                    balloonColor.appendChild(tail);
+                }
+            } else {
+                // 如果不是兔子气球，移除尾巴元素
+                const tail = balloonColor.querySelector('.balloon-tail');
+                if (tail) {
+                    balloonColor.removeChild(tail);
+                }
+            }
         }
 
         function updateCoinsDisplay() {
@@ -506,9 +552,9 @@
             unlockedBalloons.forEach(color => unlockBalloon(color));
             if (isPinkUnlocked) {
                 document.getElementById('pink-balloon-option').style.display = 'flex';
-                easterEgg.textContent = "Mystery Easter Egg: Pink Balloon";
+                updateEasterEggText();
             } else {
-                easterEgg.textContent = "Mystery Easter Egg: ????";
+                updateEasterEggText(false);
             }
             updateBalloon();
         }
@@ -538,6 +584,7 @@
         }
 
         function inflateBalloon() {
+            if (isGameOver) return;
             clicks++;
             size += 1.25;
             updateBalloon();
@@ -642,6 +689,7 @@
         }
 
         function endGame() {
+            isGameOver = true;
             playPopSound();
             createParticles();
             balloon.style.display = 'none';
@@ -652,7 +700,7 @@
                 gameOver.style.display = 'flex';
                 finalScore.textContent = clicks;
                 updateHighScores();
-                easterEgg.textContent = isPinkUnlocked ? "Mystery Easter Egg: Pink Balloon" : "Mystery Easter Egg: ????";
+                updateEasterEggText();
                 canRestart = false;
                 setTimeout(() => {
                     canRestart = true;
@@ -666,6 +714,7 @@
             size = 100;
             clicks = 0;
             popProbability = 0.02;
+            isGameOver = false;
             balloon.style.display = 'flex';
             updateBalloon();
             scoreDisplay.textContent = 'Clicks: 0';
@@ -677,13 +726,27 @@
             if (Math.random() < 0.001 && !isPinkUnlocked) {
                 currentBalloonColor = PINK_COLOR;
                 updateBalloon();
-                easterEgg.textContent = "Mystery Easter Egg: Pink Balloon";
                 isPinkUnlocked = true;
                 document.getElementById('pink-balloon-option').style.display = 'flex';
                 unlockBalloon(PINK_COLOR);
                 saveGameState();
-            } else if (!isPinkUnlocked) {
+            }
+            updateEasterEggText();
+        }
+
+        function updateEasterEggText(unlocked = isPinkUnlocked) {
+            if (unlocked) {
+                easterEgg.textContent = "Mystery Easter Egg: Pink Balloon";
+                easterEgg.style.background = 'linear-gradient(45deg, #FFC0CB, #FF69B4)';
+                easterEgg.style.webkitBackgroundClip = 'text';
+                easterEgg.style.webkitTextFillColor = 'transparent';
+                easterEgg.style.animation = 'none';
+            } else {
                 easterEgg.textContent = "Mystery Easter Egg: ????";
+                easterEgg.style.background = 'linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff)';
+                easterEgg.style.webkitBackgroundClip = 'text';
+                easterEgg.style.webkitTextFillColor = 'transparent';
+                easterEgg.style.animation = 'rainbow 5s ease infinite';
             }
         }
 
@@ -725,7 +788,7 @@
             // Hide pink balloon option
             document.getElementById('pink-balloon-option').style.display = 'none';
             
-            easterEgg.textContent = "Mystery Easter Egg: ????";
+            updateEasterEggText(false);
             
             saveGameState();
             resetGame();
